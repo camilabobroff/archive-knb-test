@@ -1,0 +1,83 @@
+---
+title: "archive-knb-test"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+Truckee River flow (2000 - 2016) 
+(From ESM 244 Assignment 3)
+
+```{r, load packages}
+
+#Part 0. Load packages
+library(tidyverse)
+library(tseries)
+library(forecast)
+
+```
+
+
+Part 1. Graph with the decomposed time series information
+```{r, graph with the decomposed time series information}
+
+# Get data
+truckee <- read_csv("clean_truckee_flow.csv")
+
+# Convert to ts data
+truckee_ts <- ts(truckee$mean_va, frequency = 12, start = c(2000,1))
+
+# plot(truckee_ts)
+# Decompose to explore data further
+
+truckee_dc <- decompose(truckee_ts)
+
+plot(truckee_dc)
+
+```
+
+
+Part 2. Forecast the Truckee River for 5 years after the final observation in the dataset
+```{r, message=FALSE, warning=FALSE}
+
+# Holt Winters exponential smoothing
+truckee_hw <- HoltWinters(truckee_ts)
+
+plot(truckee_hw)
+
+# Forecast Holt Winters
+
+truckee_forecast <- forecast(truckee_hw, h = 60)
+plot(truckee_forecast)
+
+
+# Autoregressive integrated moving average (ARIMA) for comparison
+# estimate pdq
+truckee_pdq <- auto.arima(truckee_ts) # [2,1,1,][0,0,2]
+
+# fit the ARIMA model
+truckee_arima <- arima(truckee_ts, order = c(2,1,1), seasonal = list(order = c(0,0,2)))
+
+# evaluate residuals
+par(mfrow = c(1,2))
+hist(truckee_arima$residuals)
+qqnorm(truckee_arima$residuals) # looks normal
+
+# forecast ARIMA
+forecast_truckee <- forecast(truckee_arima, h = 60)
+plot(forecast_truckee) 
+
+# Graph of Holt Winters & save as png
+
+png(file = "truckee_plot.png", width = 650, height = 350)
+plot(truckee_forecast,
+     xlab = "Time",
+     ylab = "Truckee River Flows (cubic feet per second)")
+dev.off()
+
+
+
+```
+
